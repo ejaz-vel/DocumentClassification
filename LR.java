@@ -77,6 +77,7 @@ public class LR {
 		try {
 			for(int i = 1; i <= numOfIterations; i++) {
 				learningRate /= Math.pow(i, 2);
+				double loss = 0;
 				for(int j = 0; j < trainingSetSize; j++) {
 					k++;
 					String[] trainingData = br.readLine().split("\t");
@@ -104,6 +105,7 @@ public class LR {
 							y = 1;
 						}
 						double p = predict(label, wordList);
+						loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
 						
 						//Apply gradient descent rule
 						for(String word: wordList) {
@@ -114,6 +116,7 @@ public class LR {
 						}
 					}
 				}
+				System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss/trainingSetSize));
 			}
 			br.close();
 		} catch (Exception e) {
@@ -129,7 +132,16 @@ public class LR {
 			}
 		}
 	}
-	
+
+	private Double sumOfSquaredWeights(String label) {
+		double sum = 0;
+		Map<String, Double> weights = parameterWeights.get(label);
+		for (Map.Entry<String, Double> entry : weights.entrySet()) {
+			sum += Math.pow(entry.getValue(), 2);
+		}
+		return sum;
+	}
+
 	private List<String> tokenizeString(String string, String separator) {
 		List<String> wordList = new ArrayList<>();
 		String[] words = string.split(separator);
