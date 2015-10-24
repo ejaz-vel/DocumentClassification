@@ -2,15 +2,16 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class LR {
 
-	private static Map<String, Map<String,Double>> parameterWeights;
-	private static Map<String, Map<String,Integer>> lastUpdated;
-	private static int vocabSize;
+	private static Map<String, List<Double>> parameterWeights;
+	private static Map<String, List<Integer>> lastUpdated;
+	private static int memSize;
 	private static Double learningRate;
 	private static Double regularizationFactor;
 	private static int numOfIterations;
@@ -21,7 +22,7 @@ public class LR {
 	public LR(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		vocabSize = Integer.parseInt(cmdArguments[0]);
+		memSize = Integer.parseInt(cmdArguments[0]) / 2;
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
@@ -43,8 +44,8 @@ public class LR {
 		classLabels.add("ga");
 		classLabels.add("pt");
 		for (String label: classLabels) {
-			parameterWeights.put(label, new HashMap<String,Double>());
-			lastUpdated.put(label, new HashMap<String,Integer>());
+			parameterWeights.put(label, Arrays.asList(new Double[memSize]));
+			lastUpdated.put(label, Arrays.asList(new Integer[memSize]));
 		}
 	}
 	
@@ -53,10 +54,10 @@ public class LR {
 			BufferedReader br = new BufferedReader(new FileReader(testFile));
 			String testData = br.readLine();
 			while(testData != null) {
-				List<String> wordList = tokenizeString(testData.split("\t")[1], "\\s+");
+				List<Integer> hashIndex = tokenizeStringtoHash(testData.split("\t")[1], "\\s+");
 				//Find Probability for each label
 				for(int i = 0; i < classLabels.size(); i++) {
-					double probability = predict(classLabels.get(i), wordList);
+					double probability = predict(classLabels.get(i), hashIndex);
 					System.out.print(classLabels.get(i) + "\t" + probability);
 					if (i != (classLabels.size() - 1)) {
 						System.out.print(",");
@@ -77,26 +78,26 @@ public class LR {
 		try {
 			for(int i = 1; i <= numOfIterations; i++) {
 				learningRate /= Math.pow(i, 2);
-				double loss = 0;
+				//double loss = 0;
 				for(int j = 0; j < trainingSetSize; j++) {
 					k++;
 					String[] trainingData = br.readLine().split("\t");
 					List<String> trainingLabels = tokenizeString(trainingData[0], ",");;
-					List<String> wordList = tokenizeString(trainingData[1], "\\s+");
+					List<Integer> hashIndex = tokenizeStringtoHash(trainingData[1], "\\s+");
 					for(String label : classLabels) {
 						
 						//Apply Lazy WeightDecay
-						for(String word: wordList) {
-							if (parameterWeights.get(label).get(word) == null) {
-								parameterWeights.get(label).put(word, 0.0);
+						for(Integer hash: hashIndex) {
+							if (parameterWeights.get(label).get(hash) == null) {
+								parameterWeights.get(label).set(hash, 0.0);
 							}
-							if (lastUpdated.get(label).get(word) == null) {
-								lastUpdated.get(label).put(word, 0);
+							if (lastUpdated.get(label).get(hash) == null) {
+								lastUpdated.get(label).set(hash, 0);
 							}
-							double wordWeight = parameterWeights.get(label).get(word);
+							double wordWeight = parameterWeights.get(label).get(hash);
 							wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-												k - lastUpdated.get(label).get(word));
-							parameterWeights.get(label).put(word, wordWeight);
+												k - lastUpdated.get(label).get(hash));
+							parameterWeights.get(label).set(hash, wordWeight);
 						}
 						
 						//Predict
@@ -104,19 +105,19 @@ public class LR {
 						if (trainingLabels.contains(label)) {
 							y = 1;
 						}
-						double p = predict(label, wordList);
-						loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
+						double p = predict(label, hashIndex);
+						//loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
 						
 						//Apply gradient descent rule
-						for(String word: wordList) {
-							double wordWeight = parameterWeights.get(label).get(word);
+						for(Integer hash: hashIndex) {
+							double wordWeight = parameterWeights.get(label).get(hash);
 							wordWeight += learningRate * (y - p);
-							parameterWeights.get(label).put(word, wordWeight);
-							lastUpdated.get(label).put(word, k);
+							parameterWeights.get(label).set(hash, wordWeight);
+							lastUpdated.get(label).set(hash, k);
 						}
 					}
 				}
-				System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss/trainingSetSize));
+				//System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss/trainingSetSize));
 			}
 			br.close();
 		} catch (Exception e) {
@@ -124,20 +125,24 @@ public class LR {
 		}
 		
 		for(String label: classLabels) {
-			for (Map.Entry<String, Double> entry : parameterWeights.get(label).entrySet()) {
-				double wordWeight = entry.getValue();
-				wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-									k - lastUpdated.get(label).get(entry.getKey()));
-				parameterWeights.get(label).put(entry.getKey(), wordWeight);
+			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
+				Double wordWeight = parameterWeights.get(label).get(hash);
+				if (wordWeight != null) {
+					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
+									k - lastUpdated.get(label).get(hash));
+					parameterWeights.get(label).set(hash, wordWeight);
+				}
 			}
 		}
 	}
 
 	private Double sumOfSquaredWeights(String label) {
 		double sum = 0;
-		Map<String, Double> weights = parameterWeights.get(label);
-		for (Map.Entry<String, Double> entry : weights.entrySet()) {
-			sum += Math.pow(entry.getValue(), 2);
+		List<Double> weights = parameterWeights.get(label);
+		for (Double weight : weights) {
+			if(weight != null) {
+				sum += Math.pow(weight, 2);
+			}
 		}
 		return sum;
 	}
@@ -148,20 +153,32 @@ public class LR {
 		for (String word: words) {
 			word = word.replaceAll("\\W", "");
 			if (word.length() > 0) {
-				//Find Hash of the string
-				//int id = word.hashCode() % vocabSize;
-				//wordList.add(String.valueOf(id));
 				wordList.add(word);
 			}
 		}
 		return wordList;
 	}
+	
+	private List<Integer> tokenizeStringtoHash(String string, String separator) {
+		List<Integer> hashIndex = new ArrayList<>();
+		String[] words = string.split(separator);
+		for (String word: words) {
+			word = word.replaceAll("\\W", "");
+			if (word.length() > 0) {
+				//Find Hash of the string
+				int id = word.hashCode() % memSize;
+				if (id<0) id += memSize;
+				hashIndex.add(id);
+			}
+		}
+		return hashIndex;
+	}
 
-	private double predict(String label, List<String> wordList) {
+	private double predict(String label, List<Integer> hashIndex) {
 		double dotProduct = 0;
-		for (String word: wordList) {
-			if(parameterWeights.get(label).containsKey(word)) {
-				dotProduct += parameterWeights.get(label).get(word);
+		for (Integer hash: hashIndex) {
+			if(parameterWeights.get(label).get(hash) != null) {
+				dotProduct += parameterWeights.get(label).get(hash);
 			};
 		}
 		return sigmoid(dotProduct);
