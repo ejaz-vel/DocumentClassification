@@ -101,7 +101,7 @@ public class LR {
 						//Predict
 						double y = 0;
 						if (trainingLabels.contains(label)) {
-							y=1;
+							y = 1;
 						}
 						double p = predict(label, wordList);
 						
@@ -122,13 +122,27 @@ public class LR {
 		
 		for(String label: classLabels) {
 			for (Map.Entry<String, Double> entry : parameterWeights.get(label).entrySet()) {
-				String word = entry.getKey();
 				double wordWeight = entry.getValue();
 				wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-									k - lastUpdated.get(label).get(word));
-				parameterWeights.get(label).put(word, wordWeight);
+									k - lastUpdated.get(label).get(entry.getKey()));
+				parameterWeights.get(label).put(entry.getKey(), wordWeight);
 			}
 		}
+	}
+	
+	private List<String> tokenizeString(String string, String separator) {
+		List<String> wordList = new ArrayList<>();
+		String[] words = string.split(separator);
+		for (String word: words) {
+			word = word.replaceAll("\\W", "");
+			if (word.length() > 0) {
+				//Find Hash of the string
+				//int id = word.hashCode() % vocabSize;
+				//wordList.add(String.valueOf(id));
+				wordList.add(word);
+			}
+		}
+		return wordList;
 	}
 
 	private double predict(String label, List<String> wordList) {
@@ -138,21 +152,20 @@ public class LR {
 				dotProduct += parameterWeights.get(label).get(word);
 			};
 		}
-		double prediction = (1 / (1 + Math.exp(-dotProduct)));
-		return prediction;
+		return sigmoid(dotProduct);
 	}
-	
-	private List<String> tokenizeString(String string, String separator) {
-		List<String> wordList = new ArrayList<>();
-		String[] words = string.split(separator);
-		for (String word: words) {
-			word = word.replaceAll("\\W", "");
-			if (word.length() > 0) {
-				wordList.add(word);
-			}
-		}
-		return wordList;
-	}
+
+	private double sigmoid(double score) {
+		double overflow = 20;
+        if (score > overflow) {
+        	score = overflow;
+        } else if (score < -overflow) {
+        	score = -overflow;
+        }
+        double exp = Math.exp(score);
+        return exp / (1 + exp);
+    }
+
 
 	public static void main(String[] args) {
 		LR sgd = new LR(args);
