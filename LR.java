@@ -55,9 +55,12 @@ public class LR {
 			while(testData != null) {
 				List<String> wordList = tokenizeString(testData.split("\t")[1], "\\s+");
 				//Find Probability for each label
-				for(String label: classLabels) {
-					double probability = predict(label, wordList);
-					System.out.print(label + "\t" + probability + ",");
+				for(int i = 0; i < classLabels.size(); i++) {
+					double probability = predict(classLabels.get(i), wordList);
+					System.out.print(classLabels.get(i) + "\t" + probability);
+					if (i != (classLabels.size() - 1)) {
+						System.out.print(",");
+					}
 				}
 				System.out.println();
 				testData = br.readLine();
