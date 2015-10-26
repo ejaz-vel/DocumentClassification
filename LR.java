@@ -22,7 +22,7 @@ public class LR {
 	public LR(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		memSize = Integer.parseInt(cmdArguments[0]) / 4;
+		memSize = Integer.parseInt(cmdArguments[0]) / 8;
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
