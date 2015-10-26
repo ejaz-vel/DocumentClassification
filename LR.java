@@ -9,20 +9,20 @@ import java.util.Map;
 
 public class LR {
 
-	private static Map<String, List<Double>> parameterWeights;
-	private static Map<String, List<Integer>> lastUpdated;
-	private static int memSize;
-	private static Double learningRate;
-	private static Double regularizationFactor;
-	private static int numOfIterations;
-	private static int trainingSetSize;
-	private static String testFile;
-	private static List<String> classLabels;
+	private Map<String, List<Double>> parameterWeights;
+	private Map<String, List<Integer>> lastUpdated;
+	private Double learningRate;
+	private Double regularizationFactor;
+	private Integer memSize;
+	private Integer numOfIterations;
+	private Integer trainingSetSize;
+	private String testFile;
+	private List<String> classLabels;
 
 	public LR(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		memSize = Integer.parseInt(cmdArguments[0]) / 2;
+		memSize = Integer.parseInt(cmdArguments[0]) / 4;
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
@@ -75,10 +75,11 @@ public class LR {
 	private void trainSGD() {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		int k = 0;
+		//Double minLoss = 0.0;
 		try {
 			for(int i = 1; i <= numOfIterations; i++) {
 				learningRate /= Math.pow(i, 2);
-				//double loss = 0;
+				//Double loss = 0.0;
 				for(int j = 0; j < trainingSetSize; j++) {
 					k++;
 					String[] trainingData = br.readLine().split("\t");
@@ -106,7 +107,7 @@ public class LR {
 							y = 1;
 						}
 						double p = predict(label, hashIndex);
-						//loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
+					//	loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
 						
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
@@ -117,7 +118,12 @@ public class LR {
 						}
 					}
 				}
-				//System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss/trainingSetSize));
+//				System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss));
+//				if(loss.equals(minLoss)) {
+//					//Convergence Achieved
+//					break;
+//				}
+//				minLoss = loss;
 			}
 			br.close();
 		} catch (Exception e) {
@@ -151,10 +157,7 @@ public class LR {
 		List<String> wordList = new ArrayList<>();
 		String[] words = string.split(separator);
 		for (String word: words) {
-			word = word.replaceAll("\\W", "");
-			if (word.length() > 0) {
-				wordList.add(word);
-			}
+			wordList.add(word);
 		}
 		return wordList;
 	}
@@ -163,13 +166,10 @@ public class LR {
 		List<Integer> hashIndex = new ArrayList<>();
 		String[] words = string.split(separator);
 		for (String word: words) {
-			word = word.replaceAll("\\W", "");
-			if (word.length() > 0) {
-				//Find Hash of the string
-				int id = word.hashCode() % memSize;
-				if (id<0) id += memSize;
-				hashIndex.add(id);
-			}
+			//Find Hash of the string
+			int id = word.hashCode() % memSize;
+			if (id<0) id += memSize;
+			hashIndex.add(id);
 		}
 		return hashIndex;
 	}
