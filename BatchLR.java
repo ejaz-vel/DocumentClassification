@@ -7,25 +7,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LR {
-
+public class BatchLR {
+	
 	private Map<String, List<Double>> parameterWeights;
+	private Map<String, List<Double>> gradientWeights;
 	private Map<String, List<Integer>> lastUpdated;
+	private Map<String, Double> squaredWeights;
 	private Double learningRate;
 	private Double regularizationFactor;
 	private Integer memSize;
-	private Integer numOfIterations;
+	//private Integer numOfIterations;
 	private Integer trainingSetSize;
 	private String testFile;
 	private List<String> classLabels;
 
-	public LR(String[] cmdArguments) {
+	public BatchLR(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		memSize = Integer.parseInt(cmdArguments[0]) / 15;
+		gradientWeights = new HashMap<>();
+		squaredWeights = new HashMap<>();
+		memSize = Integer.parseInt(cmdArguments[0]);
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
-		numOfIterations = Integer.parseInt(cmdArguments[3]);
+		//numOfIterations = Integer.parseInt(cmdArguments[3]);
 		trainingSetSize = Integer.parseInt(cmdArguments[4]);
 		testFile = cmdArguments[5];
 		classLabels = new ArrayList<>();
@@ -46,6 +50,8 @@ public class LR {
 		for (String label: classLabels) {
 			parameterWeights.put(label, Arrays.asList(new Double[memSize]));
 			lastUpdated.put(label, Arrays.asList(new Integer[memSize]));
+			gradientWeights.put(label, Arrays.asList(new Double[memSize]));
+			squaredWeights.put(label, 0.0);
 		}
 	}
 	
@@ -72,12 +78,15 @@ public class LR {
 		}
 	}
 
-	private void trainSGD() {
+	private void trainBatchGD() {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		int k = 0;
+		Double minLoss = 0.0;
 		try {
-			for(int i = 1; i <= numOfIterations; i++) {
+			for(int i = 1;; i++) {
 				learningRate /= Math.pow(i, 2);
+				initializeGradient();
+				Double loss = 0.0;
 				for(int j = 0; j < trainingSetSize; j++) {
 					k++;
 					String[] trainingData = br.readLine().split("\t");
@@ -93,10 +102,10 @@ public class LR {
 							if (lastUpdated.get(label).get(hash) == null) {
 								lastUpdated.get(label).set(hash, 0);
 							}
-							double wordWeight = parameterWeights.get(label).get(hash);
+							double wordWeight = gradientWeights.get(label).get(hash);
 							wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
 												k - lastUpdated.get(label).get(hash));
-							parameterWeights.get(label).set(hash, wordWeight);
+							gradientWeights.get(label).set(hash, wordWeight);
 						}
 						
 						//Predict
@@ -105,34 +114,62 @@ public class LR {
 							y = 1;
 						}
 						double p = predict(label, hashIndex);
+						loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * squaredWeights.get(label));
 						
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
-							double wordWeight = parameterWeights.get(label).get(hash);
+							double wordWeight = gradientWeights.get(label).get(hash);
 							wordWeight += learningRate * (y - p);
-							parameterWeights.get(label).set(hash, wordWeight);
+							gradientWeights.get(label).set(hash, wordWeight);
 							lastUpdated.get(label).set(hash, k);
 						}
 					}
 				}
+				loss /= trainingSetSize;
+				System.out.println("Value of Objective Function at Epoch " + i + ": " + String.valueOf(loss));
+				if(Math.abs(loss - minLoss) < 0.0001) {
+					//Convergence Achieved
+					break;
+				}
+				minLoss = loss;
+				updateWeights();
+				computeSquaredWeights();
 			}
 			br.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
 
-		// The below final weight decay does not affect accuracy by a great deal.
-		// Furthermore, it's a dense update. Hence, ignoring it will save us a lot of time.
-//		for(String label: classLabels) {
-//			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
-//				Double wordWeight = parameterWeights.get(label).get(hash);
-//				if (wordWeight != null) {
-//					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-//									k - lastUpdated.get(label).get(hash));
-//					parameterWeights.get(label).set(hash, wordWeight);
-//				}
-//			}
-//		}
+	private void updateWeights() {
+		for(String label: classLabels) {
+			for (int hash = 0; hash < gradientWeights.get(label).size(); hash++) {
+				Double weight = parameterWeights.get(label).get(hash);
+				weight += (gradientWeights.get(label).get(hash) / trainingSetSize);
+				parameterWeights.get(label).set(hash, weight);
+			}
+		}
+	}
+
+	private void initializeGradient() {
+		for(String label: classLabels) {
+			for (int hash = 0; hash < gradientWeights.get(label).size(); hash++) {
+				gradientWeights.get(label).set(hash, 0.0);
+			}
+		}
+	}
+
+	private void computeSquaredWeights() {
+		for (String label: classLabels) {
+			double sum = 0;
+			List<Double> weights = parameterWeights.get(label);
+			for (Double weight : weights) {
+				if(weight != null) {
+					sum += Math.pow(weight, 2);
+				}
+			}
+			squaredWeights.put(label, sum);
+		}
 	}
 
 	private List<String> tokenizeString(String string, String separator) {
@@ -179,8 +216,8 @@ public class LR {
 
 
 	public static void main(String[] args) {
-		LR sgd = new LR(args);
-		sgd.trainSGD();
+		BatchLR sgd = new BatchLR(args);
+		sgd.trainBatchGD();
 		sgd.classify();
 	}
 

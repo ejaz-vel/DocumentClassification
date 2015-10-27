@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LR {
+public class LRTest {
 
 	private Map<String, List<Double>> parameterWeights;
 	private Map<String, List<Integer>> lastUpdated;
@@ -19,10 +19,10 @@ public class LR {
 	private String testFile;
 	private List<String> classLabels;
 
-	public LR(String[] cmdArguments) {
+	public LRTest(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		memSize = Integer.parseInt(cmdArguments[0]) / 15;
+		memSize = Integer.parseInt(cmdArguments[0]);
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
@@ -75,10 +75,14 @@ public class LR {
 	private void trainSGD() {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		int k = 0;
+		Double loss = 0.0;
+		Double prevLoss = 0.0;
 		try {
 			for(int i = 1; i <= numOfIterations; i++) {
 				learningRate /= Math.pow(i, 2);
+				boolean converged = false;
 				for(int j = 0; j < trainingSetSize; j++) {
+					loss= 0.0;
 					k++;
 					String[] trainingData = br.readLine().split("\t");
 					List<String> trainingLabels = tokenizeString(trainingData[0], ",");;
@@ -105,6 +109,7 @@ public class LR {
 							y = 1;
 						}
 						double p = predict(label, hashIndex);
+						loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
 						
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
@@ -114,15 +119,23 @@ public class LR {
 							lastUpdated.get(label).set(hash, k);
 						}
 					}
+					System.out.println("Value of Objective Function at Iteration " + k + ": " + String.valueOf(loss));
+					if(Math.abs(loss - prevLoss) < 0.0001) {
+						converged = true;
+						break;
+					}
+					prevLoss = loss;
+				}
+				if(converged == true) {
+					//Convergence Achieved
+					break;
 				}
 			}
 			br.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		// The below final weight decay does not affect accuracy by a great deal.
-		// Furthermore, it's a dense update. Hence, ignoring it will save us a lot of time.
+		
 //		for(String label: classLabels) {
 //			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
 //				Double wordWeight = parameterWeights.get(label).get(hash);
@@ -133,6 +146,17 @@ public class LR {
 //				}
 //			}
 //		}
+	}
+
+	private Double sumOfSquaredWeights(String label) {
+		double sum = 0;
+		List<Double> weights = parameterWeights.get(label);
+		for (Double weight : weights) {
+			if(weight != null) {
+				sum += Math.pow(weight, 2);
+			}
+		}
+		return sum;
 	}
 
 	private List<String> tokenizeString(String string, String separator) {
@@ -179,7 +203,7 @@ public class LR {
 
 
 	public static void main(String[] args) {
-		LR sgd = new LR(args);
+		LRTest sgd = new LRTest(args);
 		sgd.trainSGD();
 		sgd.classify();
 	}
