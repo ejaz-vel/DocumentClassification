@@ -107,7 +107,7 @@ public class LR {
 							y = 1;
 						}
 						double p = predict(label, hashIndex);
-					//	loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
+						//loss += (y * Math.log(p)) + ((1 - y) * Math.log(1-p)) - (regularizationFactor * sumOfSquaredWeights(label));
 						
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
@@ -130,28 +130,28 @@ public class LR {
 			e.printStackTrace();
 		}
 		
-		for(String label: classLabels) {
-			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
-				Double wordWeight = parameterWeights.get(label).get(hash);
-				if (wordWeight != null) {
-					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-									k - lastUpdated.get(label).get(hash));
-					parameterWeights.get(label).set(hash, wordWeight);
-				}
-			}
-		}
+//		for(String label: classLabels) {
+//			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
+//				Double wordWeight = parameterWeights.get(label).get(hash);
+//				if (wordWeight != null) {
+//					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
+//									k - lastUpdated.get(label).get(hash));
+//					parameterWeights.get(label).set(hash, wordWeight);
+//				}
+//			}
+//		}
 	}
 
-	private Double sumOfSquaredWeights(String label) {
-		double sum = 0;
-		List<Double> weights = parameterWeights.get(label);
-		for (Double weight : weights) {
-			if(weight != null) {
-				sum += Math.pow(weight, 2);
-			}
-		}
-		return sum;
-	}
+//	private Double sumOfSquaredWeights(String label) {
+//		double sum = 0;
+//		List<Double> weights = parameterWeights.get(label);
+//		for (Double weight : weights) {
+//			if(weight != null) {
+//				sum += Math.pow(weight, 2);
+//			}
+//		}
+//		return sum;
+//	}
 
 	private List<String> tokenizeString(String string, String separator) {
 		List<String> wordList = new ArrayList<>();
