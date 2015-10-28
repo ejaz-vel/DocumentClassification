@@ -22,7 +22,7 @@ public class LR {
 	public LR(String[] cmdArguments) {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
-		memSize = Integer.parseInt(cmdArguments[0]) / 100;
+		memSize = Integer.parseInt(cmdArguments[0]) / 20;
 		learningRate = Double.parseDouble(cmdArguments[1]);
 		regularizationFactor = Double.parseDouble(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
@@ -109,7 +109,7 @@ public class LR {
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
 							double wordWeight = parameterWeights.get(label).get(hash);
-							wordWeight += learningRate * (y - p);
+							wordWeight += learningRate * (y - p) * Math.log(2);
 							parameterWeights.get(label).set(hash, wordWeight);
 							lastUpdated.get(label).set(hash, k);
 						}
@@ -123,16 +123,16 @@ public class LR {
 
 		// The below final weight decay does not affect accuracy by a great deal.
 		// Furthermore, it's a dense update. Hence, ignoring it will save us a lot of time.
-		for(String label: classLabels) {
-			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
-				Double wordWeight = parameterWeights.get(label).get(hash);
-				if (wordWeight != null) {
-					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
-									k - lastUpdated.get(label).get(hash));
-					parameterWeights.get(label).set(hash, wordWeight);
-				}
-			}
-		}
+//		for(String label: classLabels) {
+//			for (int hash = 0; hash < parameterWeights.get(label).size(); hash++) {
+//				Double wordWeight = parameterWeights.get(label).get(hash);
+//				if (wordWeight != null) {
+//					wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
+//									k - lastUpdated.get(label).get(hash));
+//					parameterWeights.get(label).set(hash, wordWeight);
+//				}
+//			}
+//		}
 	}
 
 	private List<String> tokenizeString(String string, String separator) {
