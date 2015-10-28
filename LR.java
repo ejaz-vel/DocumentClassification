@@ -9,10 +9,10 @@ import java.util.Map;
 
 public class LR {
 
-	private Map<String, List<Double>> parameterWeights;
+	private Map<String, List<Float>> parameterWeights;
 	private Map<String, List<Integer>> lastUpdated;
-	private Double learningRate;
-	private Double regularizationFactor;
+	private float learningRate;
+	private Float regularizationFactor;
 	private Integer memSize;
 	private Integer numOfIterations;
 	private Integer trainingSetSize;
@@ -23,8 +23,8 @@ public class LR {
 		parameterWeights = new HashMap<>();
 		lastUpdated = new HashMap<>();
 		memSize = Integer.parseInt(cmdArguments[0]) / 20;
-		learningRate = Double.parseDouble(cmdArguments[1]);
-		regularizationFactor = Double.parseDouble(cmdArguments[2]);
+		learningRate = Float.parseFloat(cmdArguments[1]);
+		regularizationFactor = Float.parseFloat(cmdArguments[2]);
 		numOfIterations = Integer.parseInt(cmdArguments[3]);
 		trainingSetSize = Integer.parseInt(cmdArguments[4]);
 		testFile = cmdArguments[5];
@@ -44,7 +44,7 @@ public class LR {
 		classLabels.add("ga");
 		classLabels.add("pt");
 		for (String label: classLabels) {
-			parameterWeights.put(label, Arrays.asList(new Double[memSize]));
+			parameterWeights.put(label, Arrays.asList(new Float[memSize]));
 			lastUpdated.put(label, Arrays.asList(new Integer[memSize]));
 		}
 	}
@@ -88,12 +88,12 @@ public class LR {
 						//Apply Lazy WeightDecay
 						for(Integer hash: hashIndex) {
 							if (parameterWeights.get(label).get(hash) == null) {
-								parameterWeights.get(label).set(hash, 0.0);
+								parameterWeights.get(label).set(hash, (float) 0);
 							}
 							if (lastUpdated.get(label).get(hash) == null) {
 								lastUpdated.get(label).set(hash, 0);
 							}
-							double wordWeight = parameterWeights.get(label).get(hash);
+							float wordWeight = parameterWeights.get(label).get(hash);
 							wordWeight *= Math.pow(1 - (2 * learningRate * regularizationFactor), 
 												k - lastUpdated.get(label).get(hash));
 							parameterWeights.get(label).set(hash, wordWeight);
@@ -108,7 +108,7 @@ public class LR {
 						
 						//Apply gradient descent rule
 						for(Integer hash: hashIndex) {
-							double wordWeight = parameterWeights.get(label).get(hash);
+							float wordWeight = parameterWeights.get(label).get(hash);
 							wordWeight += learningRate * (y - p) * Math.log(2);
 							parameterWeights.get(label).set(hash, wordWeight);
 							lastUpdated.get(label).set(hash, k);
